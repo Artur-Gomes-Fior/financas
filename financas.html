@@ -99,6 +99,10 @@ tr:hover td{background:rgba(255,255,255,0.02);}
 .pie-legend{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:12px;font-size:11px;color:var(--muted);}
 .pie-legend span{display:flex;align-items:center;gap:4px;}
 .pie-legend i{width:9px;height:9px;border-radius:2px;display:inline-block;flex-shrink:0;}
+.extra-section{margin-bottom:12px;}
+.extra-badge{font-size:10px;padding:2px 7px;border-radius:20px;font-family:var(--mono);background:rgba(136,135,128,0.15);color:#888780;border:1px solid rgba(136,135,128,0.3);white-space:nowrap;display:inline-block;margin-left:6px;}
+.parcela-badge{font-size:10px;padding:1px 6px;border-radius:4px;font-family:var(--mono);background:rgba(200,241,53,0.1);color:#c8f135;border:1px solid rgba(200,241,53,0.25);margin-left:4px;}
+
 </style>
 </head>
 <body>
@@ -154,6 +158,13 @@ tr:hover td{background:rgba(255,255,255,0.02);}
       </table>
     </div>
   </div>
+  <div class="card extra-section" id="extrasCard" style="display:none;margin-bottom:12px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div class="ct" style="margin-bottom:0;">Gastos extras</div>
+      <div id="extrasTotal" style="font-family:var(--mono);font-size:13px;color:var(--muted);"></div>
+    </div>
+    <div id="extrasInline"></div>
+  </div>
 </div>
 
 <div class="fab"><button class="fab-btn" onclick="openModal()">+</button></div>
@@ -171,7 +182,7 @@ tr:hover td{background:rgba(255,255,255,0.02);}
         <option>Bebida</option><option>Academia</option><option>Compras</option>
         <option>Transporte</option><option>Assinatura</option><option>Lavanderia</option>
         <option>Farmácia</option><option>Roupas</option><option>Festa</option>
-        <option>Dinheiro</option><option>Outro</option>
+        <option>Dinheiro</option><option>Gastos Extras</option><option>Outro</option>
       </select>
     </div>
     <div class="frow">
@@ -232,8 +243,9 @@ function parseCSV(text){
     const credito=parseBR(cols[3]);
     const debito=parseBR(cols[4]);
     const saldo=parseBR(cols[5]);
+    const parcela=(cols[6]||'').replace(/"/g,'').trim();
     if(!data&&!desc)continue;
-    rows.push({data,desc,cat,credito,debito,saldo});
+    rows.push({data,desc,cat,credito,debito,saldo,parcela});
   }
   return rows;
 }
@@ -285,17 +297,20 @@ function buildMonthFilter(rows){
 function render(rows){
   buildMonthFilter(rows);
   const f=filterRows(rows);
-  renderMetrics(f);
-  renderCats(f);
-  renderSaldo(f);
-  renderTop(f);
-  renderCatChips(f);
-  renderTable(f);
+  const fMain=f.filter(r=>r.cat!=='Gastos Extras');
+  const fExtras=f.filter(r=>r.cat==='Gastos Extras');
+  renderMetrics(fMain);
+  renderCats(fMain);
+  renderSaldo(fMain);
+  renderTop(fMain);
+  renderCatChips(fMain);
+  renderTable(fMain);
+  renderExtras(fExtras);
 }
 
 function renderMetrics(rows){
-  const credito=rows.reduce((a,r)=>a+r.credito,0);
-  const debito=rows.reduce((a,r)=>a+r.debito,0);
+  const credito=rows.filter(r=>r.cat!=='Gastos Extras').reduce((a,r)=>a+r.credito,0);
+  const debito=rows.filter(r=>r.cat!=='Gastos Extras').reduce((a,r)=>a+r.debito,0);
   const last=rows.filter(r=>r.saldo!==0||r.credito>0||r.debito>0);
   const saldo=last.length?last[last.length-1].saldo:0;
   const count=rows.filter(r=>r.debito>0||r.credito>0).length;
@@ -308,7 +323,7 @@ function renderMetrics(rows){
 
 function getCats(rows){
   const map={};
-  rows.filter(r=>r.debito>0).forEach(r=>{const c=r.cat||'Outro';map[c]=(map[c]||0)+r.debito;});
+  rows.filter(r=>r.debito>0&&r.cat!=='Gastos Extras'&&r.cat!=='gastos extras').forEach(r=>{const c=r.cat||'Outro';map[c]=(map[c]||0)+r.debito;});
   return Object.entries(map).sort((a,b)=>b[1]-a[1]);
 }
 
@@ -379,6 +394,27 @@ function renderCatChips(filtered){
 
 function setCat(cat){activeCat=cat;render(allRows);}
 
+function renderExtras(rows){
+  const card=document.getElementById('extrasCard');
+  const el=document.getElementById('extrasInline');
+  const tot=document.getElementById('extrasTotal');
+  if(!rows.length){card.style.display='none';return;}
+  card.style.display='block';
+  const total=rows.reduce((a,r)=>a+r.debito+r.credito,0);
+  tot.textContent='total: R$ '+fmtBR(total);
+  el.innerHTML=[...rows].reverse().map(r=>{
+    const val=r.debito>0?r.debito:r.credito;
+    return`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r.desc||'—'}${r.parcela?`<span class="parcela-badge">${r.parcela}</span>`:''}</div>
+        <div style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:2px;">${r.data||''}</div>
+      </div>
+      <div style="font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap;">R$ ${fmtBR(val)}</div>
+    </div>`;
+  }).join('');
+  // Remove last border
+  el.innerHTML=el.innerHTML.replace(/border-bottom:1px solid var\(--border\);">\s*$/, 'border-bottom:none;">');
+}
 function renderTable(rows){
   const el=document.getElementById('tableBody');
   if(!rows.length){el.innerHTML='<tr><td colspan="6" class="empty">nenhum lançamento</td></tr>';return;}
@@ -388,7 +424,7 @@ function renderTable(rows){
     const color=COLORS[idx>=0?idx%COLORS.length:13];
     return`<tr>
       <td class="dim">${r.data||'—'}</td>
-      <td style="font-size:12px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${r.desc||''}">${r.desc||'—'}</td>
+      <td style="font-size:12px;max-width:180px;" title="${r.desc||''}">${r.desc||'—'}${r.parcela?`<span class="parcela-badge">${r.parcela}</span>`:''}</td>
       <td><span class="badge" style="background:${color}22;color:${color};border:1px solid ${color}44;">${r.cat||'—'}</span></td>
       <td class="mono green" style="font-size:11px;">${r.credito>0?'R$ '+fmtBR(r.credito):''}</td>
       <td class="mono red" style="font-size:11px;">${r.debito>0?'R$ '+fmtBR(r.debito):''}</td>
