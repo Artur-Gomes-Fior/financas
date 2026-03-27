@@ -259,16 +259,18 @@ function getMonths(rows){
   });
   return [...months].sort();
 }
+function getMonthKey(data){
+  if(!data)return'';
+  const p=data.split('/');
+  if(p.length<3)return'';
+  return`${p[1].padStart(2,'0')}/${p[2].slice(-2)}`;
+}
 
 function filterRows(rows){
   return rows.filter(r=>{
     if(!r.data)return false;
     let ok=true;
-    if(activeMonth){
-      const p=r.data.split('/');
-      const key=`${(p[1]||'').padStart(2,'0')}/${(p[2]||'').slice(-2)}`;
-      ok=ok&&key===activeMonth;
-    }
+    if(activeMonth){ok=ok&&getMonthKey(r.data)===activeMonth;}
     if(activeCat)ok=ok&&r.cat===activeCat;
     return ok;
   });
