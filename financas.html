@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finanças · Artur</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{
+  --bg:#0f0f0f;--surface:#181818;--surface2:#222;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#f0f0f0;--muted:#777;--muted2:#555;
+  --accent:#c8f135;--accent-dim:rgba(200,241,53,0.1);
+  --red:#ff5c5c;--red-dim:rgba(255,92,92,0.1);
+  --mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;
+  --r:12px;--rs:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh;}
+.app{max-width:920px;margin:0 auto;padding:24px 16px 100px;}
+header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+.logo{font-family:var(--mono);font-size:17px;color:var(--accent);}
+.logo em{color:var(--muted);font-style:normal;font-weight:400;}
+.month-filter{display:flex;gap:6px;flex-wrap:wrap;}
+.mbtn{font-family:var(--mono);font-size:11px;padding:5px 11px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;}
+.mbtn:hover{color:var(--accent);border-color:var(--accent);}
+.mbtn.active{background:var(--accent);color:#0f0f0f;border-color:var(--accent);font-weight:500;}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:18px;}
+@media(max-width:580px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr));}}
+.mc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;}
+.mc-l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;font-family:var(--mono);}
+.mc-v{font-size:19px;font-weight:500;font-family:var(--mono);color:var(--text);}
+.mc-v.neg{color:var(--red);}
+.mc-v.pos{color:var(--accent);}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-bottom:12px;}
+@media(max-width:580px){.g2{grid-template-columns:1fr;}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;}
+.ct{font-size:10px;font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;}
+.crow{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);}
+.crow:last-child{border-bottom:none;}
+.cdot{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+.cname{flex:1;font-size:13px;}
+.cpct{font-size:11px;color:var(--muted);font-family:var(--mono);margin-right:4px;}
+.cval{font-size:12px;font-family:var(--mono);white-space:nowrap;}
+.bbg{height:3px;background:rgba(255,255,255,0.06);border-radius:2px;margin-top:4px;}
+.bfill{height:3px;border-radius:2px;}
+.twrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:6px 8px;text-align:left;border-bottom:1px solid var(--border2);white-space:nowrap;}
+td{padding:8px 8px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,0.02);}
+.badge{font-size:10px;padding:2px 8px;border-radius:20px;font-family:var(--mono);white-space:nowrap;display:inline-block;}
+.mono{font-family:var(--mono);}
+.red{color:var(--red);}
+.green{color:var(--accent);}
+.dim{color:var(--muted);font-size:11px;font-family:var(--mono);}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.chip{font-family:var(--mono);font-size:10px;padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;}
+.chip.active{background:var(--surface2);color:var(--text);border-color:var(--border2);}
+.chip:hover{color:var(--text);}
+.fab{position:fixed;bottom:24px;right:24px;z-index:100;}
+.fab-btn{width:54px;height:54px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;font-size:26px;line-height:1;color:#0f0f0f;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 24px rgba(200,241,53,0.25);transition:transform .15s;}
+.fab-btn:hover{transform:scale(1.08);}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;display:none;align-items:center;justify-content:center;padding:16px;}
+.overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:24px;width:100%;max-width:400px;}
+.modal-title{font-family:var(--mono);font-size:13px;color:var(--accent);margin-bottom:20px;}
+.frow{margin-bottom:13px;}
+.frow label{display:block;font-size:10px;font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;}
+.frow input,.frow select{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);font-family:var(--mono);font-size:13px;padding:9px 12px;outline:none;transition:border-color .15s;}
+.frow input:focus,.frow select:focus{border-color:var(--accent);}
+.frow select option{background:var(--surface2);}
+.type-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:13px;}
+.tbtn{padding:9px;border-radius:var(--rs);border:1px solid var(--border2);background:transparent;color:var(--muted);font-family:var(--mono);font-size:12px;cursor:pointer;transition:all .15s;}
+.tbtn.deb{background:var(--red-dim);border-color:var(--red);color:var(--red);}
+.tbtn.cred{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
+.factions{display:flex;gap:8px;margin-top:4px;}
+.bcanel{flex:1;padding:10px;border-radius:var(--rs);border:1px solid var(--border2);background:transparent;color:var(--muted);font-family:var(--mono);font-size:12px;cursor:pointer;}
+.bsave{flex:2;padding:10px;border-radius:var(--rs);border:none;background:var(--accent);color:#0f0f0f;font-family:var(--mono);font-size:12px;font-weight:500;cursor:pointer;transition:opacity .15s;}
+.bsave:disabled{opacity:.45;cursor:not-allowed;}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border2);border-radius:var(--rs);padding:10px 18px;font-family:var(--mono);font-size:12px;color:var(--accent);display:none;z-index:300;white-space:nowrap;}
+.toast.show{display:block;}
+.loading{text-align:center;color:var(--muted);font-family:var(--mono);font-size:12px;padding:40px;}
+.empty{text-align:center;color:var(--muted2);font-family:var(--mono);font-size:12px;padding:28px;}
+.pie-legend{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:12px;font-size:11px;color:var(--muted);}
+.pie-legend span{display:flex;align-items:center;gap:4px;}
+.pie-legend i{width:9px;height:9px;border-radius:2px;display:inline-block;flex-shrink:0;}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">fin<em>/</em>artur</div>
+    <div class="month-filter" id="monthFilter"></div>
+  </header>
+  <div class="metrics" id="metrics">
+    <div class="mc"><div class="mc-l">Créditos</div><div class="mc-v">—</div></div>
+    <div class="mc"><div class="mc-l">Débitos</div><div class="mc-v">—</div></div>
+    <div class="mc"><div class="mc-l">Saldo</div><div class="mc-v">—</div></div>
+    <div class="mc"><div class="mc-l">Lançamentos</div><div class="mc-v">—</div></div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="ct">Por categoria</div>
+      <div id="catList"><div class="loading">carregando...</div></div>
+    </div>
+    <div class="card">
+      <div class="ct">Distribuição</div>
+      <div style="position:relative;height:200px;"><canvas id="pieChart"></canvas></div>
+      <div class="pie-legend" id="pieLegend"></div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="ct">Saldo ao longo do mês</div>
+      <div style="position:relative;height:180px;"><canvas id="saldoChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ct">Maiores gastos</div>
+      <div id="topList"><div class="loading">carregando...</div></div>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:12px;">
+    <div class="ct">Lançamentos</div>
+    <div class="chips" id="catChips"></div>
+    <div class="twrap">
+      <table>
+        <thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Crédito</th><th>Débito</th><th>Saldo</th></tr></thead>
+        <tbody id="tableBody"><tr><td colspan="6" class="loading">carregando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="fab"><button class="fab-btn" onclick="openModal()">+</button></div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-title">+ novo lançamento</div>
+    <div class="frow"><label>Data</label><input type="date" id="fData"></div>
+    <div class="frow"><label>Descrição</label><input type="text" id="fDesc" placeholder="ex: Mercado, Uber..."></div>
+    <div class="frow">
+      <label>Categoria</label>
+      <select id="fCat">
+        <option value="">Selecione...</option>
+        <option>Moradia</option><option>Comida</option><option>Mercado</option>
+        <option>Bebida</option><option>Academia</option><option>Compras</option>
+        <option>Transporte</option><option>Assinatura</option><option>Lavanderia</option>
+        <option>Farmácia</option><option>Roupas</option><option>Festa</option>
+        <option>Dinheiro</option><option>Outro</option>
+      </select>
+    </div>
+    <div class="frow">
+      <label>Tipo</label>
+      <div class="type-row">
+        <button class="tbtn deb" id="btnDeb" onclick="setType('debito')">↓ Débito</button>
+        <button class="tbtn" id="btnCred" onclick="setType('credito')">↑ Crédito</button>
+      </div>
+    </div>
+    <div class="frow"><label>Valor (R$)</label><input type="number" id="fVal" placeholder="0.00" step="0.01" min="0"></div>
+    <div class="factions">
+      <button class="bcanel" onclick="closeModal()">Cancelar</button>
+      <button class="bsave" id="btnSave" onclick="salvar()">Salvar</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vQMaV8RPJmFobeiycThKiy0v4Lfu5ZLbeiDOHEW1Ptgl3tIe3iB0Nf0pkZnUKzzK-aeN2BUlZrwX-ss/pub?output=csv';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzeakQ0bPB8emFl6NmSOME3_clV2ay4qyA0mdyzoVyhZemnAk60rAsFh71LrXFCPIY7/exec';
+const COLORS=['#c8f135','#378ADD','#1D9E75','#ff5c5c','#7F77DD','#D4537E','#BA7517','#5DCAA5','#888780','#F0997B','#ED93B1','#EF9F27','#B4B2A9','#639922'];
+let allRows=[],activeMonth=null,activeCat=null,fType='debito',pieChart=null,saldoChart=null;
+
+function parseBR(s){if(!s||s.trim()==='')return 0;return parseFloat(s.replace(/\./g,'').replace(',','.'))||0;}
+function fmtBR(n){return n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+function parseCSV(text){
+  const lines=text.trim().split('\n');
+  const rows=[];
+  for(let i=1;i<lines.length;i++){
+    const cols=lines[i].split(',');
+    if(cols.length<2)continue;
+    const data=cols[0]?.trim(),desc=cols[1]?.trim(),cat=cols[2]?.trim();
+    const credito=parseBR(cols[3]),debito=parseBR(cols[4]),saldo=parseBR(cols[5]);
+    if(!data&&!desc)continue;
+    rows.push({data,desc,cat,credito,debito,saldo});
+  }
+  return rows;
+}
+
+function getMonths(rows){
+  const months=new Set();
+  rows.forEach(r=>{
+    if(!r.data)return;
+    const p=r.data.split('/');
+    if(p.length>=3)months.add(`${p[1].padStart(2,'0')}/${p[2].slice(-2)}`);
+  });
+  return [...months].sort();
+}
+
+function filterRows(rows){
+  return rows.filter(r=>{
+    if(!r.data)return false;
+    let ok=true;
+    if(activeMonth){
+      const p=r.data.split('/');
+      const key=`${(p[1]||'').padStart(2,'0')}/${(p[2]||'').slice(-2)}`;
+      ok=ok&&key===activeMonth;
+    }
+    if(activeCat)ok=ok&&r.cat===activeCat;
+    return ok;
+  });
+}
+
+function buildMonthFilter(rows){
+  const months=getMonths(rows);
+  const wrap=document.getElementById('monthFilter');
+  wrap.innerHTML='';
+  const allBtn=document.createElement('button');
+  allBtn.className='mbtn'+(activeMonth===null?' active':'');
+  allBtn.textContent='Todos';
+  allBtn.onclick=()=>{activeMonth=null;render(allRows);};
+  wrap.appendChild(allBtn);
+  const names=['','jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  months.forEach(m=>{
+    const btn=document.createElement('button');
+    btn.className='mbtn'+(activeMonth===m?' active':'');
+    const[mm,yy]=m.split('/');
+    btn.textContent=(names[parseInt(mm)]||mm)+'/'+yy;
+    btn.onclick=()=>{activeMonth=m;render(allRows);};
+    wrap.appendChild(btn);
+  });
+}
+
+function render(rows){
+  buildMonthFilter(rows);
+  const f=filterRows(rows);
+  renderMetrics(f);
+  renderCats(f);
+  renderSaldo(f);
+  renderTop(f);
+  renderCatChips(f);
+  renderTable(f);
+}
+
+function renderMetrics(rows){
+  const credito=rows.reduce((a,r)=>a+r.credito,0);
+  const debito=rows.reduce((a,r)=>a+r.debito,0);
+  const last=rows.filter(r=>r.saldo!==0||r.credito>0||r.debito>0);
+  const saldo=last.length?last[last.length-1].saldo:0;
+  const count=rows.filter(r=>r.debito>0||r.credito>0).length;
+  document.getElementById('metrics').innerHTML=`
+    <div class="mc"><div class="mc-l">Créditos</div><div class="mc-v pos">R$ ${fmtBR(credito)}</div></div>
+    <div class="mc"><div class="mc-l">Débitos</div><div class="mc-v red">R$ ${fmtBR(debito)}</div></div>
+    <div class="mc"><div class="mc-l">Saldo</div><div class="mc-v ${saldo<0?'neg':'pos'}">R$ ${fmtBR(saldo)}</div></div>
+    <div class="mc"><div class="mc-l">Lançamentos</div><div class="mc-v">${count}</div></div>`;
+}
+
+function getCats(rows){
+  const map={};
+  rows.filter(r=>r.debito>0).forEach(r=>{const c=r.cat||'Outro';map[c]=(map[c]||0)+r.debito;});
+  return Object.entries(map).sort((a,b)=>b[1]-a[1]);
+}
+
+function renderCats(rows){
+  const cats=getCats(rows);
+  const total=cats.reduce((a,c)=>a+c[1],0);
+  const el=document.getElementById('catList');
+  if(!cats.length){el.innerHTML='<div class="empty">sem dados</div>';return;}
+  el.innerHTML=cats.map(([name,val],i)=>{
+    const pct=total>0?((val/total)*100).toFixed(1):0;
+    const color=COLORS[i%COLORS.length];
+    return`<div class="crow">
+      <div class="cdot" style="background:${color}"></div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;">
+          <span class="cname">${name}</span>
+          <span class="cpct">${pct}%</span>
+          <span class="cval">R$ ${fmtBR(val)}</span>
+        </div>
+        <div class="bbg"><div class="bfill" style="width:${pct}%;background:${color}"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+  if(pieChart)pieChart.destroy();
+  pieChart=new Chart(document.getElementById('pieChart'),{
+    type:'doughnut',
+    data:{labels:cats.map(([n])=>n),datasets:[{data:cats.map(([,v])=>v),backgroundColor:cats.map((_,i)=>COLORS[i%COLORS.length]),borderWidth:1,borderColor:'transparent'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` R$ ${fmtBR(ctx.raw)}`}}}}
+  });
+  document.getElementById('pieLegend').innerHTML=cats.slice(0,8).map(([name],i)=>`<span><i style="background:${COLORS[i%COLORS.length]}"></i>${name}</span>`).join('');
+}
+
+function renderSaldo(rows){
+  const pts=rows.filter(r=>r.data);
+  if(saldoChart)saldoChart.destroy();
+  saldoChart=new Chart(document.getElementById('saldoChart'),{
+    type:'line',
+    data:{labels:pts.map(r=>r.data),datasets:[{data:pts.map(r=>r.saldo),borderColor:'#c8f135',backgroundColor:'rgba(200,241,53,0.06)',fill:true,tension:0.3,pointRadius:1.5,borderWidth:2,segment:{borderColor:ctx=>ctx.p1.parsed.y<0?'#ff5c5c':'#c8f135'}}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` R$ ${fmtBR(ctx.raw)}`}}},scales:{x:{ticks:{font:{size:9},color:'#555',maxRotation:45,autoSkip:true,maxTicksLimit:8},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{font:{size:9},color:'#555',callback:v=>'R$'+Math.round(v/1000)+'k'},grid:{color:'rgba(255,255,255,0.04)'}}}}
+  });
+}
+
+function renderTop(rows){
+  const top=[...rows].filter(r=>r.debito>0).sort((a,b)=>b.debito-a.debito).slice(0,8);
+  const el=document.getElementById('topList');
+  if(!top.length){el.innerHTML='<div class="empty">sem dados</div>';return;}
+  const allCats=getCats(rows);
+  el.innerHTML=top.map(r=>{
+    const idx=allCats.findIndex(([n])=>n===r.cat);
+    const color=COLORS[idx>=0?idx%COLORS.length:0];
+    return`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);">
+      <div style="width:7px;height:7px;border-radius:2px;background:${color};flex-shrink:0;"></div>
+      <span style="flex:1;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;" title="${r.desc}">${r.desc}</span>
+      <span class="mono red" style="font-size:12px;">R$ ${fmtBR(r.debito)}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderCatChips(filtered){
+  const cats=getCats(filterRows(allRows).filter(r=>activeCat?r.cat===activeCat:true));
+  const allCats=getCats(filterRows(allRows));
+  const el=document.getElementById('catChips');
+  el.innerHTML=`<button class="chip ${activeCat===null?'active':''}" onclick="setCat(null)">Todos</button>`;
+  allCats.forEach(([name])=>{
+    el.innerHTML+=`<button class="chip ${activeCat===name?'active':''}" onclick="setCat('${name}')">${name}</button>`;
+  });
+}
+
+function setCat(cat){activeCat=cat;render(allRows);}
+
+function renderTable(rows){
+  const el=document.getElementById('tableBody');
+  if(!rows.length){el.innerHTML='<tr><td colspan="6" class="empty">nenhum lançamento</td></tr>';return;}
+  const allCats=getCats(allRows);
+  el.innerHTML=[...rows].reverse().map(r=>{
+    const idx=allCats.findIndex(([n])=>n===r.cat);
+    const color=COLORS[idx>=0?idx%COLORS.length:13];
+    return`<tr>
+      <td class="dim">${r.data||'—'}</td>
+      <td style="font-size:12px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${r.desc||''}">${r.desc||'—'}</td>
+      <td><span class="badge" style="background:${color}22;color:${color};border:1px solid ${color}44;">${r.cat||'—'}</span></td>
+      <td class="mono green" style="font-size:11px;">${r.credito>0?'R$ '+fmtBR(r.credito):''}</td>
+      <td class="mono red" style="font-size:11px;">${r.debito>0?'R$ '+fmtBR(r.debito):''}</td>
+      <td class="mono ${r.saldo<0?'red':'green'}" style="font-size:11px;">R$ ${fmtBR(r.saldo)}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function loadData(){
+  try{
+    const res=await fetch(CSV_URL+'&t='+Date.now());
+    const text=await res.text();
+    allRows=parseCSV(text);
+    if(activeMonth===null&&allRows.length){
+      const months=getMonths(allRows);
+      if(months.length)activeMonth=months[months.length-1];
+    }
+    render(allRows);
+  }catch(e){
+    document.getElementById('tableBody').innerHTML='<tr><td colspan="6" class="empty">erro ao carregar — verifique a URL do CSV</td></tr>';
+  }
+}
+
+function openModal(){
+  document.getElementById('fData').value=new Date().toISOString().split('T')[0];
+  document.getElementById('fDesc').value='';
+  document.getElementById('fCat').value='';
+  document.getElementById('fVal').value='';
+  setType('debito');
+  document.getElementById('overlay').classList.add('open');
+}
+function closeModal(){document.getElementById('overlay').classList.remove('open');}
+function setType(t){
+  fType=t;
+  document.getElementById('btnDeb').className='tbtn'+(t==='debito'?' deb':'');
+  document.getElementById('btnCred').className='tbtn'+(t==='credito'?' cred':'');
+}
+
+async function salvar(){
+  const data=document.getElementById('fData').value;
+  const desc=document.getElementById('fDesc').value.trim();
+  const cat=document.getElementById('fCat').value;
+  const val=parseFloat(document.getElementById('fVal').value);
+  if(!data||!desc||!cat||!val||val<=0){showToast('preencha todos os campos');return;}
+  const btn=document.getElementById('btnSave');
+  btn.disabled=true;btn.textContent='salvando...';
+  const payload={
+    data:data.split('-').reverse().join('/'),
+    descricao:desc,
+    classificacao:cat,
+    credito:fType==='credito'?val:0,
+    debito:fType==='debito'?val:0
+  };
+  try{
+    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify(payload)});
+    closeModal();
+    showToast('salvo! atualizando...');
+    setTimeout(()=>loadData(),2500);
+  }catch(e){
+    showToast('erro ao salvar');
+  }
+  btn.disabled=false;btn.textContent='Salvar';
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+document.getElementById('overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
+loadData();
+</script>
+</body>
+</html>
