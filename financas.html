@@ -18,6 +18,18 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh;}
+#loginScreen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;}
+.login-box{width:100%;max-width:320px;}
+.login-logo{font-family:var(--mono);font-size:22px;color:var(--accent);margin-bottom:8px;}
+.login-logo em{color:var(--muted);font-style:normal;}
+.login-sub{font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:32px;}
+.login-label{font-size:10px;font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;display:block;}
+.login-input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);font-family:var(--mono);font-size:14px;padding:11px 14px;outline:none;transition:border-color .15s;margin-bottom:10px;}
+.login-input:focus{border-color:var(--accent);}
+.login-btn{width:100%;padding:11px;border-radius:var(--rs);border:none;background:var(--accent);color:#0f0f0f;font-family:var(--mono);font-size:13px;font-weight:500;cursor:pointer;transition:opacity .15s;}
+.login-btn:hover{opacity:.88;}
+.login-err{font-size:11px;font-family:var(--mono);color:var(--red);margin-top:8px;display:none;}
+.login-err.show{display:block;}
 .app{max-width:920px;margin:0 auto;padding:24px 16px 100px;}
 header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
 .logo{font-family:var(--mono);font-size:17px;color:var(--accent);}
@@ -90,7 +102,17 @@ tr:hover td{background:rgba(255,255,255,0.02);}
 </style>
 </head>
 <body>
-<div class="app">
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">fin<em>/</em>artur</div>
+    <div class="login-sub">acesso restrito</div>
+    <label class="login-label">senha</label>
+    <input class="login-input" type="password" id="loginInput" placeholder="••••••••" onkeydown="if(event.key==='Enter')checkLogin()">
+    <button class="login-btn" onclick="checkLogin()">entrar</button>
+    <div class="login-err" id="loginErr">senha incorreta</div>
+  </div>
+</div>
+<div class="app" id="mainApp" style="display:none">
   <header>
     <div class="logo">fin<em>/</em>artur</div>
     <div class="month-filter" id="monthFilter"></div>
@@ -413,7 +435,26 @@ function showToast(msg){
 }
 
 document.getElementById('overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
-loadData();
+const PASS='arturemfloripa';
+function checkLogin(){
+  const val=document.getElementById('loginInput').value;
+  if(val===PASS){
+    sessionStorage.setItem('fin_auth','1');
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('mainApp').style.display='block';
+    loadData();
+  } else {
+    document.getElementById('loginErr').classList.add('show');
+    document.getElementById('loginInput').value='';
+    document.getElementById('loginInput').focus();
+  }
+}
+if(sessionStorage.getItem('fin_auth')==='1'){
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('mainApp').style.display='block';
+  loadData();
+}
+document.getElementById('loginInput').focus();
 </script>
 </body>
 </html>
