@@ -201,8 +201,13 @@ function fmtBR(n){return n.toLocaleString('pt-BR',{minimumFractionDigits:2,maxim
 
 function parseCSV(text){
   const lines=text.trim().split('\n');
+  // Find header row (contains "Data" or "Descrição")
+  let headerIdx=0;
+  for(let i=0;i<Math.min(5,lines.length);i++){
+    if(lines[i].includes('Data')||lines[i].includes('escri')){headerIdx=i;break;}
+  }
   const rows=[];
-  for(let i=1;i<lines.length;i++){
+  for(let i=headerIdx+1;i<lines.length;i++){
     const cols=lines[i].split(',');
     if(cols.length<2)continue;
     const data=cols[0]?.trim(),desc=cols[1]?.trim(),cat=cols[2]?.trim();
