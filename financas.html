@@ -196,22 +196,44 @@ const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzeakQ0bPB8emFl6NmSOME
 const COLORS=['#c8f135','#378ADD','#1D9E75','#ff5c5c','#7F77DD','#D4537E','#BA7517','#5DCAA5','#888780','#F0997B','#ED93B1','#EF9F27','#B4B2A9','#639922'];
 let allRows=[],activeMonth=null,activeCat=null,fType='debito',pieChart=null,saldoChart=null;
 
-function parseBR(s){if(!s||s.trim()==='')return 0;return parseFloat(s.replace(/\./g,'').replace(',','.'))||0;}
+function parseBR(s){
+  if(!s||s.trim()==='')return 0;
+  s=s.replace(/"/g,'').trim();
+  if(s.match(/,\d{1,2}$/))return parseFloat(s.replace(/\./g,'').replace(',','.'))||0;
+  return parseFloat(s.replace(/,/g,''))||0;
+}
 function fmtBR(n){return n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 
 function parseCSV(text){
   const lines=text.trim().split('\n');
-  // Find header row (contains "Data" or "Descrição")
+  // Detect separator: semicolon or comma
+  const sample=lines.slice(0,5).join('\n');
+  const sep=sample.split(';').length>sample.split(',').length?';':',';
+  // Find header row
   let headerIdx=0;
   for(let i=0;i<Math.min(5,lines.length);i++){
     if(lines[i].includes('Data')||lines[i].includes('escri')){headerIdx=i;break;}
   }
   const rows=[];
   for(let i=headerIdx+1;i<lines.length;i++){
-    const cols=lines[i].split(',');
+    const raw=lines[i].trim();
+    if(!raw)continue;
+    // Parse respecting quoted fields
+    const cols=[];
+    let cur='',inQ=false;
+    for(let c=0;c<raw.length;c++){
+      if(raw[c]==='"'){inQ=!inQ;}
+      else if(raw[c]===sep&&!inQ){cols.push(cur.trim());cur='';}
+      else{cur+=raw[c];}
+    }
+    cols.push(cur.trim());
     if(cols.length<2)continue;
-    const data=cols[0]?.trim(),desc=cols[1]?.trim(),cat=cols[2]?.trim();
-    const credito=parseBR(cols[3]),debito=parseBR(cols[4]),saldo=parseBR(cols[5]);
+    const data=cols[0]?.replace(/"/g,'').trim();
+    const desc=cols[1]?.replace(/"/g,'').trim();
+    const cat=cols[2]?.replace(/"/g,'').trim();
+    const credito=parseBR(cols[3]);
+    const debito=parseBR(cols[4]);
+    const saldo=parseBR(cols[5]);
     if(!data&&!desc)continue;
     rows.push({data,desc,cat,credito,debito,saldo});
   }
