@@ -247,8 +247,9 @@ function parseCSV(text){
     const debito=parseBR(cols[4]);
     const saldo=parseBR(cols[5]);
     const parcela=(cols[6]||'').replace(/"/g,'').trim();
+    const ciclo=(cols[7]||'').replace(/"/g,'').trim();
     if(!data&&!desc)continue;
-    rows.push({data,desc,cat,credito,debito,saldo,parcela});
+    rows.push({data,desc,cat,credito,debito,saldo,parcela,ciclo});
   }
   return rows;
 }
@@ -257,8 +258,8 @@ function getMonths(rows){
   const months=new Set();
   rows.forEach(r=>{
     if(!r.data)return;
-    const p=r.data.split('/');
-    if(p.length>=3)months.add(`${p[1].padStart(2,'0')}/${p[2].slice(-2)}`);
+    const key=parseCiclo(r.ciclo)||getMonthKey(r.data);
+    if(key)months.add(key);
   });
   return [...months].sort();
 }
@@ -268,12 +269,25 @@ function getMonthKey(data){
   if(p.length<3)return'';
   return`${p[1].padStart(2,'0')}/${p[2].slice(-2)}`;
 }
+const MONTH_NAMES={'jan':'01','fev':'02','mar':'03','abr':'04','mai':'05','jun':'06','jul':'07','ago':'08','set':'09','out':'10','nov':'11','dez':'12'};
+function parseCiclo(ciclo){
+  if(!ciclo)return null;
+  // Format: "mar/26" or "03/26"
+  const p=ciclo.trim().toLowerCase().split('/');
+  if(p.length<2)return null;
+  const mm=MONTH_NAMES[p[0]]||p[0].padStart(2,'0');
+  const yy=p[1].slice(-2);
+  return`${mm}/${yy}`;
+}
 
 function filterRows(rows){
   return rows.filter(r=>{
     if(!r.data)return false;
     let ok=true;
-    if(activeMonth){ok=ok&&getMonthKey(r.data)===activeMonth;}
+    if(activeMonth){
+      const key=parseCiclo(r.ciclo)||getMonthKey(r.data);
+      ok=ok&&key===activeMonth;
+    }
     if(activeCat)ok=ok&&r.cat===activeCat;
     return ok;
   });
