@@ -291,12 +291,48 @@ function filterRows(rows){
     if(!r.data)return false;
     let ok=true;
     if(activeMonth){
-      const key=parseCiclo(r.ciclo)||getMonthKey(r.data);
+      const key=parseCiclo(r.ciclo)||getMonthKey(r.data); // Volta a usar ciclo!
       ok=ok&&key===activeMonth;
     }
     if(activeCat)ok=ok&&r.cat===activeCat;
     return ok;
   });
+}
+
+function renderMetrics(rows, allRowsThisMonth){
+  const credito=rows.filter(r=>r.cat!=='Gastos Extras').reduce((a,r)=>a+r.credito,0);
+  const debito=rows.filter(r=>r.cat!=='Gastos Extras').reduce((a,r)=>a+r.debito,0);
+  const saldoMes=credito-debito;
+  
+  // Saldo Geral = saldo anterior + saldo do mês
+  let saldoAnterior=0;
+  if(activeMonth){
+    const mesesAnteriores=getMonths(allRows).filter(m=>m<activeMonth);
+    if(mesesAnteriores.length>0){
+      const ultimoMesAnterior=mesesAnteriores[mesesAnteriores.length-1];
+      // Buscar último lançamento do mês anterior (pelo ciclo)
+      const lastDoMesAnterior=allRows
+        .filter(r=>{
+          if(!r.data)return false;
+          const key=parseCiclo(r.ciclo)||getMonthKey(r.data);
+          return key===ultimoMesAnterior;
+        })
+        .slice(-1)[0];
+      if(lastDoMesAnterior){
+        saldoAnterior=lastDoMesAnterior.saldo||0;
+      }
+    }
+  }
+  
+  const saldoGeral=saldoAnterior+saldoMes;
+  const count=rows.filter(r=>r.debito>0||r.credito>0).length;
+  
+  document.getElementById('metrics').innerHTML=`
+    <div class="mc"><div class="mc-l">Créditos</div><div class="mc-v pos">R$ ${fmtBR(credito)}</div></div>
+    <div class="mc"><div class="mc-l">Débitos</div><div class="mc-v red">R$ ${fmtBR(debito)}</div></div>
+    <div class="mc"><div class="mc-l">Saldo do Mês</div><div class="mc-v ${saldoMes<0?'neg':'pos'}">R$ ${fmtBR(saldoMes)}</div></div>
+    <div class="mc"><div class="mc-l">Saldo Geral</div><div class="mc-v ${saldoGeral<0?'neg':'pos'}">R$ ${fmtBR(saldoGeral)}</div></div>
+    <div class="mc"><div class="mc-l">Lançamentos</div><div class="mc-v">${count}</div></div>`;
 }
 
 function buildMonthFilter(rows){
