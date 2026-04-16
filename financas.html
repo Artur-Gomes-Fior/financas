@@ -302,9 +302,10 @@ function filterRows(rows){
 
 
 function normalizeMonth(m){
-  // Converte "mar/26" ou "03/26" para "03/26" (sempre numérico)
+  // Converte "mar./26" ou "mar/26" ou "03/26" para "03/26" (sempre numérico)
   if(!m)return null;
-  const p=m.split('/');
+  const clean=m.trim().toLowerCase().replace('.',''); // Remove ponto!
+  const p=clean.split('/');
   if(p.length<2)return null;
   const mm=MONTH_NAMES[p[0]]||p[0].padStart(2,'0');
   const yy=p[1].slice(-2);
