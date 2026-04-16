@@ -338,29 +338,10 @@ function renderMetrics(rows){
   const debito=rows.filter(r=>r.cat!=='Gastos Extras').reduce((a,r)=>a+r.debito,0);
   const saldoMes=credito-debito;
   
-  // Calcular saldo geral: buscar último lançamento do mês anterior
-  let saldoAnterior=0;
-  if(activeMonth){
-    // Buscar todos os lançamentos de meses anteriores
-    const mesesAnteriores=getMonths(allRows).filter(m=>m<activeMonth);
-    if(mesesAnteriores.length>0){
-      // Pegar o último mês anterior
-      const ultimoMesAnterior=mesesAnteriores[mesesAnteriores.length-1];
-      // Buscar o último lançamento desse mês
-      const lastLancamentoMesAnterior=allRows
-        .filter(r=>{
-          if(!r.data)return false;
-          const key=parseCiclo(r.ciclo)||getMonthKey(r.data);
-          return key===ultimoMesAnterior;
-        })
-        .slice(-1)[0];
-      if(lastLancamentoMesAnterior){
-        saldoAnterior=lastLancamentoMesAnterior.saldo||0;
-      }
-    }
-  }
+  // Saldo Geral = saldo consolidado do último lançamento do mês
+  const lastRow=rows.filter(r=>r.saldo!==undefined&&r.saldo!==null).slice(-1)[0];
+  const saldoGeral=lastRow?.saldo||0;
   
-  const saldoGeral=saldoAnterior+saldoMes;
   const count=rows.filter(r=>r.debito>0||r.credito>0).length;
   
   document.getElementById('metrics').innerHTML=`
