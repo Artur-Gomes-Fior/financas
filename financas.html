@@ -343,24 +343,24 @@ function renderMetrics(rows, allRowsThisMonth){
   const saldoMes=credito-debito;
   
   // Saldo Geral = saldo anterior + saldo do mês
-  let saldoGeral=saldoMes; // Por padrão, Saldo Geral = Saldo do Mês (primeiro mês)
+  let saldoGeral=saldoMes; // Por padrão (primeiro mês)
   
   if(activeMonth){
-    const mesesAnteriores=getMonths(allRows).filter(m=>m<activeMonth).sort();
-    if(mesesAnteriores.length>0){
-      const ultimoMesAnterior=mesesAnteriores[mesesAnteriores.length-1];
-      // Buscar último lançamento do mês anterior (sem Gastos Extras)
-      const linhasUltimoMes=allRows
-        .filter(r=>{
-          if(!r.data)return false;
-          const key=parseCiclo(r.ciclo)||getMonthKey(r.data);
-          return key===ultimoMesAnterior;
-        })
-        .filter(r=>!r.cat||r.cat.toLowerCase()!=='gastos extras');
+    // Pegar TODAS as linhas ANTES do mês atual (independente de Gastos Extras)
+    const linhasAnteriores=allRows.filter(r=>{
+      if(!r.data)return false;
+      const key=parseCiclo(r.ciclo)||getMonthKey(r.data);
+      return key<activeMonth; // Menor que o mês atual
+    });
+    
+    if(linhasAnteriores.length>0){
+      // Pegar o ÚLTIMO saldo consolidado (que já inclui tudo)
+      const ultimaLinha=linhasAnteriores
+        .filter(r=>r.saldo!==undefined&&r.saldo!==null)
+        .slice(-1)[0];
       
-      if(linhasUltimoMes.length>0){
-        const ultimaLinha=linhasUltimoMes[linhasUltimoMes.length-1];
-        const saldoAnterior=ultimaLinha.saldo||0;
+      if(ultimaLinha){
+        const saldoAnterior=ultimaLinha.saldo;
         saldoGeral=saldoAnterior+saldoMes;
       }
     }
