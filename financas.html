@@ -324,7 +324,7 @@ function render(rows){
   const f=filterRows(rows);
   const fMain=f.filter(r=>r.cat!=='Gastos Extras');
   const fExtras=f.filter(r=>r.cat==='Gastos Extras');
-  renderMetrics(fMain);
+  renderMetrics(fMain, f);
   renderCats(fMain);
   renderSaldo(fMain);
   renderTop(fMain);
@@ -333,13 +333,13 @@ function render(rows){
   renderExtras(fExtras);
 }
 
-function renderMetrics(rows){
+function renderMetrics(rows, allRowsThisMonth){
   const credito=rows.filter(r=>r.cat!=='Gastos Extras').reduce((a,r)=>a+r.credito,0);
   const debito=rows.filter(r=>r.cat!=='Gastos Extras').reduce((a,r)=>a+r.debito,0);
   const saldoMes=credito-debito;
   
-  // Saldo Geral = saldo consolidado do último lançamento do mês
-  const lastRow=rows.filter(r=>r.saldo!==undefined&&r.saldo!==null).slice(-1)[0];
+  // Saldo Geral = saldo consolidado do último lançamento do mês (incluindo Gastos Extras)
+  const lastRow=allRowsThisMonth.filter(r=>r.saldo!==undefined&&r.saldo!==null).slice(-1)[0];
   const saldoGeral=lastRow?.saldo||0;
   
   const count=rows.filter(r=>r.debito>0||r.credito>0).length;
