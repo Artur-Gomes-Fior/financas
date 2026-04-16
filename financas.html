@@ -299,41 +299,7 @@ function filterRows(rows){
   });
 }
 
-function renderMetrics(rows, allRowsThisMonth){
-  const credito=rows.filter(r=>r.cat&&r.cat.toLowerCase()!=='gastos extras').reduce((a,r)=>a+r.credito,0);
-  const debito=rows.filter(r=>r.cat&&r.cat.toLowerCase()!=='gastos extras').reduce((a,r)=>a+r.debito,0);
-  const saldoMes=credito-debito;
-  
-  // Saldo Geral = saldo anterior + saldo do mês
-  let saldoAnterior=0;
-  if(activeMonth){
-    const mesesAnteriores=getMonths(allRows).filter(m=>m<activeMonth);
-    if(mesesAnteriores.length>0){
-      const ultimoMesAnterior=mesesAnteriores[mesesAnteriores.length-1];
-      // Buscar último lançamento do mês anterior (pelo ciclo)
-      const lastDoMesAnterior=allRows
-        .filter(r=>{
-          if(!r.data)return false;
-          const key=parseCiclo(r.ciclo)||getMonthKey(r.data);
-          return key===ultimoMesAnterior;
-        })
-        .slice(-1)[0];
-      if(lastDoMesAnterior){
-        saldoAnterior=lastDoMesAnterior.saldo||0;
-      }
-    }
-  }
-  
-  const saldoGeral=saldoAnterior+saldoMes;
-  const count=rows.filter(r=>r.debito>0||r.credito>0).length;
-  
-  document.getElementById('metrics').innerHTML=`
-    <div class="mc"><div class="mc-l">Créditos</div><div class="mc-v pos">R$ ${fmtBR(credito)}</div></div>
-    <div class="mc"><div class="mc-l">Débitos</div><div class="mc-v red">R$ ${fmtBR(debito)}</div></div>
-    <div class="mc"><div class="mc-l">Saldo do Mês</div><div class="mc-v ${saldoMes<0?'neg':'pos'}">R$ ${fmtBR(saldoMes)}</div></div>
-    <div class="mc"><div class="mc-l">Saldo Geral</div><div class="mc-v ${saldoGeral<0?'neg':'pos'}">R$ ${fmtBR(saldoGeral)}</div></div>
-    <div class="mc"><div class="mc-l">Lançamentos</div><div class="mc-v">${count}</div></div>`;
-}
+
 
 function buildMonthFilter(rows){
   const months=getMonths(rows);
@@ -358,7 +324,8 @@ function buildMonthFilter(rows){
 function render(rows){
   buildMonthFilter(rows);
   const f=filterRows(rows);
-  const fMain=f.filter(r=>r.cat&&r.cat.toLowerCase()!=='gastos extras');
+  // Incluir linhas SEM categoria E linhas que NÃO são Gastos Extras
+  const fMain=f.filter(r=>!r.cat||r.cat.toLowerCase()!=='gastos extras');
   const fExtras=f.filter(r=>r.cat&&r.cat.toLowerCase()==='gastos extras');
   renderMetrics(fMain, f);
   renderCats(fMain);
@@ -370,13 +337,34 @@ function render(rows){
 }
 
 function renderMetrics(rows, allRowsThisMonth){
-  const credito=rows.filter(r=>r.cat&&r.cat.toLowerCase()!=='gastos extras').reduce((a,r)=>a+r.credito,0);
-  const debito=rows.filter(r=>r.cat&&r.cat.toLowerCase()!=='gastos extras').reduce((a,r)=>a+r.debito,0);
+  // rows já está filtrado sem Gastos Extras
+  const credito=rows.reduce((a,r)=>a+r.credito,0);
+  const debito=rows.reduce((a,r)=>a+r.debito,0);
   const saldoMes=credito-debito;
   
-  // Saldo Geral = saldo consolidado do último lançamento do mês (incluindo Gastos Extras)
-  const lastRow=allRowsThisMonth.filter(r=>r.saldo!==undefined&&r.saldo!==null).slice(-1)[0];
-  const saldoGeral=lastRow?.saldo||0;
+  // Saldo Geral = saldo anterior + saldo do mês
+  let saldoGeral=saldoMes; // Por padrão, Saldo Geral = Saldo do Mês (primeiro mês)
+  
+  if(activeMonth){
+    const mesesAnteriores=getMonths(allRows).filter(m=>m<activeMonth).sort();
+    if(mesesAnteriores.length>0){
+      const ultimoMesAnterior=mesesAnteriores[mesesAnteriores.length-1];
+      // Buscar último lançamento do mês anterior (sem Gastos Extras)
+      const linhasUltimoMes=allRows
+        .filter(r=>{
+          if(!r.data)return false;
+          const key=parseCiclo(r.ciclo)||getMonthKey(r.data);
+          return key===ultimoMesAnterior;
+        })
+        .filter(r=>!r.cat||r.cat.toLowerCase()!=='gastos extras');
+      
+      if(linhasUltimoMes.length>0){
+        const ultimaLinha=linhasUltimoMes[linhasUltimoMes.length-1];
+        const saldoAnterior=ultimaLinha.saldo||0;
+        saldoGeral=saldoAnterior+saldoMes;
+      }
+    }
+  }
   
   const count=rows.filter(r=>r.debito>0||r.credito>0).length;
   
@@ -467,7 +455,7 @@ function renderExtras(rows){
   const tot=document.getElementById('extrasTotal');
   if(!rows.length){card.style.display='none';return;}
   card.style.display='block';
-  const total=rows.reduce((a,r)=>a+r.debito+r.credito,0);
+  const total=rows.reduce((a,r)=>a+(r.debito||r.credito),0); // Pega débito OU crédito, não ambos!
   tot.textContent='total: R$ '+fmtBR(total);
   el.innerHTML=[...rows].reverse().map(r=>{
     const val=r.debito>0?r.debito:r.credito;
