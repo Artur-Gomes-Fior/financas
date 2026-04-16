@@ -373,6 +373,7 @@ function renderMetrics(rows, allRowsThisMonth){
       if(ultimaLinha){
         const saldoAnterior=ultimaLinha.saldo;
         saldoGeral=saldoAnterior+saldoMes;
+        console.log(`[${activeMonth}] ${saldoAnterior} + ${saldoMes} = ${saldoGeral}`);
       }
     }
   }
