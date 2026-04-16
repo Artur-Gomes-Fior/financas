@@ -300,8 +300,8 @@ function filterRows(rows){
 }
 
 function renderMetrics(rows, allRowsThisMonth){
-  const credito=rows.filter(r=>r.cat!=='Gastos Extras').reduce((a,r)=>a+r.credito,0);
-  const debito=rows.filter(r=>r.cat!=='Gastos Extras').reduce((a,r)=>a+r.debito,0);
+  const credito=rows.filter(r=>r.cat&&r.cat.toLowerCase()!=='gastos extras').reduce((a,r)=>a+r.credito,0);
+  const debito=rows.filter(r=>r.cat&&r.cat.toLowerCase()!=='gastos extras').reduce((a,r)=>a+r.debito,0);
   const saldoMes=credito-debito;
   
   // Saldo Geral = saldo anterior + saldo do mês
@@ -358,8 +358,8 @@ function buildMonthFilter(rows){
 function render(rows){
   buildMonthFilter(rows);
   const f=filterRows(rows);
-  const fMain=f.filter(r=>r.cat!=='Gastos Extras');
-  const fExtras=f.filter(r=>r.cat==='Gastos Extras');
+  const fMain=f.filter(r=>r.cat&&r.cat.toLowerCase()!=='gastos extras');
+  const fExtras=f.filter(r=>r.cat&&r.cat.toLowerCase()==='gastos extras');
   renderMetrics(fMain, f);
   renderCats(fMain);
   renderSaldo(fMain);
@@ -370,8 +370,8 @@ function render(rows){
 }
 
 function renderMetrics(rows, allRowsThisMonth){
-  const credito=rows.filter(r=>r.cat!=='Gastos Extras').reduce((a,r)=>a+r.credito,0);
-  const debito=rows.filter(r=>r.cat!=='Gastos Extras').reduce((a,r)=>a+r.debito,0);
+  const credito=rows.filter(r=>r.cat&&r.cat.toLowerCase()!=='gastos extras').reduce((a,r)=>a+r.credito,0);
+  const debito=rows.filter(r=>r.cat&&r.cat.toLowerCase()!=='gastos extras').reduce((a,r)=>a+r.debito,0);
   const saldoMes=credito-debito;
   
   // Saldo Geral = saldo consolidado do último lançamento do mês (incluindo Gastos Extras)
@@ -390,7 +390,7 @@ function renderMetrics(rows, allRowsThisMonth){
 
 function getCats(rows){
   const map={};
-  rows.filter(r=>r.debito>0&&r.cat!=='Gastos Extras'&&r.cat!=='gastos extras').forEach(r=>{const c=r.cat||'Outro';map[c]=(map[c]||0)+r.debito;});
+  rows.filter(r=>r.debito>0&&r.cat&&r.cat.toLowerCase()!=='gastos extras'&&r.cat!=='gastos extras').forEach(r=>{const c=r.cat||'Outro';map[c]=(map[c]||0)+r.debito;});
   return Object.entries(map).sort((a,b)=>b[1]-a[1]);
 }
 
