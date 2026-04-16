@@ -8,10 +8,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
 :root{
-  --bg:#0a0e27;--surface:#0f1535;--surface2:#141d3d;
-  --border:rgba(0,168,255,0.08);--border2:rgba(0,168,255,0.15);
-  --text:#e8f0ff;--muted:#7a8db5;--muted2:#5a6d95;
-  --accent:#00a8ff;--accent-dim:rgba(0,168,255,0.1);
+  --bg:#0f0f0f;--surface:#181818;--surface2:#222;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#f0f0f0;--muted:#777;--muted2:#555;
+  --accent:#c8f135;--accent-dim:rgba(200,241,53,0.1);
   --red:#ff5c5c;--red-dim:rgba(255,92,92,0.1);
   --mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;
   --r:12px;--rs:8px;
@@ -338,16 +338,25 @@ function renderMetrics(rows){
   const debito=rows.filter(r=>r.cat!=='Gastos Extras').reduce((a,r)=>a+r.debito,0);
   const saldoMes=credito-debito;
   
-  // Calcular saldo geral: buscar saldo anterior do último lançamento antes do mês filtrado
+  // Calcular saldo geral: buscar último lançamento do mês anterior
   let saldoAnterior=0;
   if(activeMonth){
-    const allBeforeMonth=allRows.filter(r=>{
-      if(!r.data)return false;
-      const key=parseCiclo(r.ciclo)||getMonthKey(r.data);
-      return key<activeMonth;
-    });
-    if(allBeforeMonth.length){
-      saldoAnterior=allBeforeMonth[allBeforeMonth.length-1].saldo||0;
+    // Buscar todos os lançamentos de meses anteriores
+    const mesesAnteriores=getMonths(allRows).filter(m=>m<activeMonth);
+    if(mesesAnteriores.length>0){
+      // Pegar o último mês anterior
+      const ultimoMesAnterior=mesesAnteriores[mesesAnteriores.length-1];
+      // Buscar o último lançamento desse mês
+      const lastLancamentoMesAnterior=allRows
+        .filter(r=>{
+          if(!r.data)return false;
+          const key=parseCiclo(r.ciclo)||getMonthKey(r.data);
+          return key===ultimoMesAnterior;
+        })
+        .slice(-1)[0];
+      if(lastLancamentoMesAnterior){
+        saldoAnterior=lastLancamentoMesAnterior.saldo||0;
+      }
     }
   }
   
