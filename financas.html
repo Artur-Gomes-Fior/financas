@@ -127,7 +127,7 @@ tr:hover td{background:rgba(255,255,255,0.02);}
     <div class="mc"><div class="mc-l">Débitos</div><div class="mc-v">—</div></div>
     <div class="mc"><div class="mc-l">Saldo do Mês</div><div class="mc-v">—</div></div>
     <div class="mc"><div class="mc-l">Saldo Geral</div><div class="mc-v">—</div></div>
-    <div class="mc"><div class="mc-l">Lançamentos 1</div><div class="mc-v">—</div></div>
+    <div class="mc"><div class="mc-l">Lançamentos 2</div><div class="mc-v">—</div></div>
   </div>
   <div class="g2">
     <div class="card">
@@ -338,9 +338,9 @@ function buildMonthFilter(rows){
 function render(rows){
   buildMonthFilter(rows);
   const f=filterRows(rows);
-  // Incluir linhas SEM categoria E linhas que NÃO são Gastos Extras
-  const fMain=f.filter(r=>!r.cat||r.cat.toLowerCase()!=='gastos extras');
-  const fExtras=f.filter(r=>r.cat&&r.cat.toLowerCase()==='gastos extras');
+  // Gastos Extras = itens que têm AMBOS crédito E débito (anulam-se)
+  const fMain=f.filter(r=>!(r.credito>0&&r.debito>0));
+  const fExtras=f.filter(r=>r.credito>0&&r.debito>0);
   renderMetrics(fMain, f);
   renderCats(fMain);
   renderSaldo(fMain);
@@ -371,7 +371,7 @@ function renderMetrics(rows, allRowsThisMonth){
       // Pegar o ÚLTIMO saldo consolidado (SEM Gastos Extras)
       const ultimaLinha=linhasAnteriores
         .filter(r=>r.saldo!==undefined&&r.saldo!==null)
-        .filter(r=>!r.cat||r.cat.toLowerCase()!=='gastos extras') // REMOVE Gastos Extras
+        .filter(r=>!(r.credito>0&&r.debito>0)) // Remove itens com ambos crédito e débito
         .slice(-1)[0];
       
       if(ultimaLinha){
