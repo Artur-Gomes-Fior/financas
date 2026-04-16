@@ -361,7 +361,6 @@ function renderMetrics(rows, allRowsThisMonth){
   let saldoGeral=saldoMes; // Por padrão (primeiro mês)
   
   if(activeMonth){
-    // Calcular saldo consolidado de TODOS os meses anteriores
     let saldoAnterior = 0;
     
     const linhasAnteriores = allRows.filter(r => {
@@ -371,7 +370,6 @@ function renderMetrics(rows, allRowsThisMonth){
     });
     
     if(linhasAnteriores.length > 0) {
-      // Calcular: Créditos Anteriores - Débitos Anteriores
       const creditoAnterior = linhasAnteriores
         .filter(r => !(r.credito > 0 && r.debito > 0))
         .reduce((a,r) => a + r.credito, 0);
@@ -384,8 +382,6 @@ function renderMetrics(rows, allRowsThisMonth){
     }
     
     saldoGeral = saldoAnterior + saldoMes;
-    console.log(`[${activeMonth}] Saldo Anterior = ${creditoAnterior} - ${debitoAnterior} = ${saldoAnterior}`);
-    console.log(`[${activeMonth}] ${saldoAnterior} + ${saldoMes} = ${saldoGeral}`);
   }
   
   const count=rows.filter(r=>r.debito>0||r.credito>0).length;
