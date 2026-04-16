@@ -368,9 +368,10 @@ function renderMetrics(rows, allRowsThisMonth){
     });
     
     if(linhasAnteriores.length>0){
-      // Pegar o ÚLTIMO saldo consolidado (que já inclui tudo)
+      // Pegar o ÚLTIMO saldo consolidado (SEM Gastos Extras)
       const ultimaLinha=linhasAnteriores
         .filter(r=>r.saldo!==undefined&&r.saldo!==null)
+        .filter(r=>!r.cat||r.cat.toLowerCase()!=='gastos extras') // REMOVE Gastos Extras
         .slice(-1)[0];
       
       if(ultimaLinha){
