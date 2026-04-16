@@ -8,10 +8,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
 :root{
-  --bg:#0f0f0f;--surface:#181818;--surface2:#222;
-  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
-  --text:#f0f0f0;--muted:#777;--muted2:#555;
-  --accent:#c8f135;--accent-dim:rgba(200,241,53,0.1);
+  --bg:#0a0e27;--surface:#0f1535;--surface2:#141d3d;
+  --border:rgba(0,168,255,0.08);--border2:rgba(0,168,255,0.15);
+  --text:#e8f0ff;--muted:#7a8db5;--muted2:#5a6d95;
+  --accent:#00a8ff;--accent-dim:rgba(0,168,255,0.1);
   --red:#ff5c5c;--red-dim:rgba(255,92,92,0.1);
   --mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;
   --r:12px;--rs:8px;
@@ -125,7 +125,8 @@ tr:hover td{background:rgba(255,255,255,0.02);}
   <div class="metrics" id="metrics">
     <div class="mc"><div class="mc-l">Créditos</div><div class="mc-v">—</div></div>
     <div class="mc"><div class="mc-l">Débitos</div><div class="mc-v">—</div></div>
-    <div class="mc"><div class="mc-l">Saldo</div><div class="mc-v">—</div></div>
+    <div class="mc"><div class="mc-l">Saldo do Mês</div><div class="mc-v">—</div></div>
+    <div class="mc"><div class="mc-l">Saldo Geral</div><div class="mc-v">—</div></div>
     <div class="mc"><div class="mc-l">Lançamentos</div><div class="mc-v">—</div></div>
   </div>
   <div class="g2">
@@ -206,9 +207,7 @@ tr:hover td{background:rgba(255,255,255,0.02);}
 <div class="toast" id="toast"></div>
 
 <script>
-// URLs para as duas abas da planilha
-// INSTRUÇÕES: Abra cada aba da planilha, vá em File > Publish to Web
-// Selecione a aba e format CSV, copie o link e substituia aqui
+// URLs para as duas abas da planilha (LINKS PERMANENTES)
 const CSV_URLS={
   'Despesas Gerais': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQMaV8RPJmFobeiycThKiy0v4Lfu5ZLbeiDOHEW1Ptgl3tIe3iB0Nf0pkZnUKzzK-aeN2BUlZrwX-ss/pub?gid=0&single=true&output=csv',
   'Gastos Cartão': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQMaV8RPJmFobeiycThKiy0v4Lfu5ZLbeiDOHEW1Ptgl3tIe3iB0Nf0pkZnUKzzK-aeN2BUlZrwX-ss/pub?gid=908818856&single=true&output=csv'
@@ -337,13 +336,29 @@ function render(rows){
 function renderMetrics(rows){
   const credito=rows.filter(r=>r.cat!=='Gastos Extras').reduce((a,r)=>a+r.credito,0);
   const debito=rows.filter(r=>r.cat!=='Gastos Extras').reduce((a,r)=>a+r.debito,0);
-  const last=rows.filter(r=>r.saldo!==0||r.credito>0||r.debito>0);
-  const saldo=last.length?last[last.length-1].saldo:0;
+  const saldoMes=credito-debito;
+  
+  // Calcular saldo geral: buscar saldo anterior do último lançamento antes do mês filtrado
+  let saldoAnterior=0;
+  if(activeMonth){
+    const allBeforeMonth=allRows.filter(r=>{
+      if(!r.data)return false;
+      const key=parseCiclo(r.ciclo)||getMonthKey(r.data);
+      return key<activeMonth;
+    });
+    if(allBeforeMonth.length){
+      saldoAnterior=allBeforeMonth[allBeforeMonth.length-1].saldo||0;
+    }
+  }
+  
+  const saldoGeral=saldoAnterior+saldoMes;
   const count=rows.filter(r=>r.debito>0||r.credito>0).length;
+  
   document.getElementById('metrics').innerHTML=`
     <div class="mc"><div class="mc-l">Créditos</div><div class="mc-v pos">R$ ${fmtBR(credito)}</div></div>
     <div class="mc"><div class="mc-l">Débitos</div><div class="mc-v red">R$ ${fmtBR(debito)}</div></div>
-    <div class="mc"><div class="mc-l">Saldo</div><div class="mc-v ${saldo<0?'neg':'pos'}">R$ ${fmtBR(saldo)}</div></div>
+    <div class="mc"><div class="mc-l">Saldo do Mês</div><div class="mc-v ${saldoMes<0?'neg':'pos'}">R$ ${fmtBR(saldoMes)}</div></div>
+    <div class="mc"><div class="mc-l">Saldo Geral</div><div class="mc-v ${saldoGeral<0?'neg':'pos'}">R$ ${fmtBR(saldoGeral)}</div></div>
     <div class="mc"><div class="mc-l">Lançamentos</div><div class="mc-v">${count}</div></div>`;
 }
 
@@ -472,7 +487,15 @@ async function loadData(){
         // Filtrar itens de "Cartão" da aba "Despesas Gerais" para evitar duplicação
         // (pois os itens individuais estão em "Gastos Cartão")
         if(source==='Despesas Gerais'){
-          rows=rows.filter(r=>r.cat!=='Cartão'&&!r.desc.includes('Cartão de Crédito'));
+          rows=rows.filter(r=>{
+            // Remove linhas com categoria "Cartão"
+            if(r.cat==='Cartão') return false;
+            // Remove linhas com descrição contendo "Cartão de Crédito" (case-insensitive)
+            if(r.desc && r.desc.toLowerCase().includes('cartão de crédito')) return false;
+            // Remove linhas com descrição contendo "sem gastos extras" (resumo)
+            if(r.desc && r.desc.toLowerCase().includes('sem gastos extras')) return false;
+            return true;
+          });
         }
         
         allData.push(...rows);
@@ -480,6 +503,24 @@ async function loadData(){
         console.warn(`Erro ao carregar ${source}:`,e);
       }
     }
+    // Ordenar por data para recalcular saldo de forma consolidada
+    allData.sort((a,b)=>{
+      const parseDate=d=>{
+        if(!d)return new Date(0);
+        const p=d.split('/');
+        if(p.length<3)return new Date(0);
+        return new Date(p[2],parseInt(p[1])-1,parseInt(p[0]));
+      };
+      return parseDate(a.data)-parseDate(b.data);
+    });
+    
+    // Recalcular saldo de forma consolidada
+    let saldoAcumulado=0;
+    allData.forEach(r=>{
+      saldoAcumulado+=r.credito-r.debito;
+      r.saldo=saldoAcumulado;
+    });
+    
     allRows=allData;
     if(activeMonth===null&&allRows.length){
       const months=getMonths(allRows);
