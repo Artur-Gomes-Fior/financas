@@ -127,7 +127,7 @@ tr:hover td{background:rgba(255,255,255,0.02);}
     <div class="mc"><div class="mc-l">Débitos</div><div class="mc-v">—</div></div>
     <div class="mc"><div class="mc-l">Saldo do Mês</div><div class="mc-v">—</div></div>
     <div class="mc"><div class="mc-l">Saldo Geral</div><div class="mc-v">—</div></div>
-    <div class="mc"><div class="mc-l">Lançamentos 2</div><div class="mc-v">—</div></div>
+    <div class="mc"><div class="mc-l">Lançamentos</div><div class="mc-v">—</div></div>
   </div>
   <div class="g2">
     <div class="card">
@@ -351,35 +351,41 @@ function render(rows){
 }
 
 function renderMetrics(rows, allRowsThisMonth){
-  // rows já está filtrado sem Gastos Extras
-  const credito=rows.reduce((a,r)=>a+r.credito,0);
-  const debito=rows.reduce((a,r)=>a+r.debito,0);
+  // Filtro duplo para garantir remoção de Gastos Extras (itens com ambos crédito E débito)
+  const noExtras=rows.filter(r=>!(r.credito>0&&r.debito>0));
+  const credito=noExtras.reduce((a,r)=>a+r.credito,0);
+  const debito=noExtras.reduce((a,r)=>a+r.debito,0);
   const saldoMes=credito-debito;
   
   // Saldo Geral = saldo anterior + saldo do mês
   let saldoGeral=saldoMes; // Por padrão (primeiro mês)
   
   if(activeMonth){
-    // Pegar TODAS as linhas ANTES do mês atual (independente de Gastos Extras)
-    const linhasAnteriores=allRows.filter(r=>{
-      if(!r.data)return false;
-      const key=parseCiclo(r.ciclo)||getMonthKey(r.data);
-      return key<activeMonth; // Menor que o mês atual
+    // Calcular saldo consolidado de TODOS os meses anteriores
+    let saldoAnterior = 0;
+    
+    const linhasAnteriores = allRows.filter(r => {
+      if(!r.data) return false;
+      const key = parseCiclo(r.ciclo) || getMonthKey(r.data);
+      return key < activeMonth;
     });
     
-    if(linhasAnteriores.length>0){
-      // Pegar o ÚLTIMO saldo consolidado (SEM Gastos Extras)
-      const ultimaLinha=linhasAnteriores
-        .filter(r=>r.saldo!==undefined&&r.saldo!==null)
-        .filter(r=>!(r.credito>0&&r.debito>0)) // Remove itens com ambos crédito e débito
-        .slice(-1)[0];
+    if(linhasAnteriores.length > 0) {
+      // Calcular: Créditos Anteriores - Débitos Anteriores
+      const creditoAnterior = linhasAnteriores
+        .filter(r => !(r.credito > 0 && r.debito > 0))
+        .reduce((a,r) => a + r.credito, 0);
       
-      if(ultimaLinha){
-        const saldoAnterior=ultimaLinha.saldo;
-        saldoGeral=saldoAnterior+saldoMes;
-        console.log(`[${activeMonth}] ${saldoAnterior} + ${saldoMes} = ${saldoGeral}`);
-      }
+      const debitoAnterior = linhasAnteriores
+        .filter(r => !(r.credito > 0 && r.debito > 0))
+        .reduce((a,r) => a + r.debito, 0);
+      
+      saldoAnterior = creditoAnterior - debitoAnterior;
     }
+    
+    saldoGeral = saldoAnterior + saldoMes;
+    console.log(`[${activeMonth}] Saldo Anterior = ${creditoAnterior} - ${debitoAnterior} = ${saldoAnterior}`);
+    console.log(`[${activeMonth}] ${saldoAnterior} + ${saldoMes} = ${saldoGeral}`);
   }
   
   const count=rows.filter(r=>r.debito>0||r.credito>0).length;
