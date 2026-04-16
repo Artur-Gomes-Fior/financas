@@ -210,8 +210,8 @@ tr:hover td{background:rgba(255,255,255,0.02);}
 // INSTRUÇÕES: Abra cada aba da planilha, vá em File > Publish to Web
 // Selecione a aba e format CSV, copie o link e substituia aqui
 const CSV_URLS={
-  'Despesas Gerais': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQMaV8RPJmFobeiycThKiy0v4Lfu5ZLbeiDOHEW1Ptgl3tIe3iB0Nf0pkZnUKzzK-aeN2BUlZrwX-ss/pub?gid=0&single=true&output=csv',
-  'Gastos Cartão': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQMaV8RPJmFobeiycThKiy0v4Lfu5ZLbeiDOHEW1Ptgl3tIe3iB0Nf0pkZnUKzzK-aeN2BUlZrwX-ss/pub?gid=908818856&single=true&output=csv'
+  'Despesas Gerais': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR_REPLACE_WITH_YOUR_LINK_1/pub?output=csv',
+  'Gastos Cartão': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR_REPLACE_WITH_YOUR_LINK_2/pub?output=csv'
 };
 const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzeakQ0bPB8emFl6NmSOME3_clV2ay4qyA0mdyzoVyhZemnAk60rAsFh71LrXFCPIY7/exec';
 const COLORS=['#c8f135','#378ADD','#1D9E75','#ff5c5c','#7F77DD','#D4537E','#BA7517','#5DCAA5','#888780','#F0997B','#ED93B1','#EF9F27','#B4B2A9','#639922'];
@@ -467,7 +467,14 @@ async function loadData(){
       try{
         const res=await fetch(url+'&t='+Date.now());
         const text=await res.text();
-        const rows=parseCSV(text);
+        let rows=parseCSV(text);
+        
+        // Filtrar itens de "Cartão" da aba "Despesas Gerais" para evitar duplicação
+        // (pois os itens individuais estão em "Gastos Cartão")
+        if(source==='Despesas Gerais'){
+          rows=rows.filter(r=>r.cat!=='Cartão'&&!r.desc.includes('Cartão de Crédito'));
+        }
+        
         allData.push(...rows);
       }catch(e){
         console.warn(`Erro ao carregar ${source}:`,e);
