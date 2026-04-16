@@ -301,6 +301,16 @@ function filterRows(rows){
 
 
 
+function normalizeMonth(m){
+  // Converte "mar/26" ou "03/26" para "03/26" (sempre numérico)
+  if(!m)return null;
+  const p=m.split('/');
+  if(p.length<2)return null;
+  const mm=MONTH_NAMES[p[0]]||p[0].padStart(2,'0');
+  const yy=p[1].slice(-2);
+  return`${mm}/${yy}`;
+}
+
 function buildMonthFilter(rows){
   const months=getMonths(rows);
   const wrap=document.getElementById('monthFilter');
@@ -313,10 +323,11 @@ function buildMonthFilter(rows){
   const names=['','jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
   months.forEach(m=>{
     const btn=document.createElement('button');
-    btn.className='mbtn'+(activeMonth===m?' active':'');
+    const normalized=normalizeMonth(m);
+    btn.className='mbtn'+(activeMonth===normalized?' active':'');
     const[mm,yy]=m.split('/');
     btn.textContent=(names[parseInt(mm)]||mm)+'/'+yy;
-    btn.onclick=()=>{activeMonth=m;render(allRows);};
+    btn.onclick=()=>{activeMonth=normalized;render(allRows);};
     wrap.appendChild(btn);
   });
 }
