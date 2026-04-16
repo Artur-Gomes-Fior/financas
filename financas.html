@@ -307,7 +307,8 @@ function normalizeMonth(m){
   const clean=m.trim().toLowerCase().replace('.',''); // Remove ponto!
   const p=clean.split('/');
   if(p.length<2)return null;
-  const mm=MONTH_NAMES[p[0]]||p[0].padStart(2,'0');
+  const mmNum=MONTH_NAMES[p[0]];
+  const mm=(mmNum?String(mmNum).padStart(2,'0'):p[0].padStart(2,'0'));
   const yy=p[1].slice(-2);
   return`${mm}/${yy}`;
 }
@@ -551,7 +552,7 @@ async function loadData(){
     allRows=allData;
     if(activeMonth===null&&allRows.length){
       const months=getMonths(allRows);
-      if(months.length)activeMonth=months[months.length-1];
+      if(months.length)activeMonth=normalizeMonth(months[months.length-1]);
     }
     render(allRows);
   }catch(e){
