@@ -278,10 +278,11 @@ function getMonthKey(data){
 const MONTH_NAMES={'jan':'01','fev':'02','mar':'03','abr':'04','mai':'05','jun':'06','jul':'07','ago':'08','set':'09','out':'10','nov':'11','dez':'12'};
 function parseCiclo(ciclo){
   if(!ciclo)return null;
-  // Format: "mar/26" or "03/26"
-  const p=ciclo.trim().toLowerCase().split('/');
+  const clean=ciclo.trim().toLowerCase().replace('.',''); // Remove ponto!
+  const p=clean.split('/');
   if(p.length<2)return null;
-  const mm=MONTH_NAMES[p[0]]||p[0].padStart(2,'0');
+  const mmNum=MONTH_NAMES[p[0]];
+  const mm=(mmNum?String(mmNum).padStart(2,'0'):p[0].padStart(2,'0'));
   const yy=p[1].slice(-2);
   return`${mm}/${yy}`;
 }
